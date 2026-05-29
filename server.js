@@ -447,10 +447,9 @@ async function handleRequest(req, res) {
   }
 }
 
-const server = http.createServer(handleRequest);
-
 if (require.main === module) {
   ensureAppReady().then(() => {
+    const server = http.createServer(handleRequest);
     server.listen(PORT, HOST, () => {
       const storage = hasSupabaseConfig() ? "Supabase" : "local JSON";
       console.log(`AirInvoice running at http://localhost:${PORT} (${storage} storage)`);
