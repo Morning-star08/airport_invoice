@@ -398,8 +398,23 @@ async function serveStatic(req, res, pathname) {
   }
 }
 
-const server = http.createServer(async (req, res) => {
+let appReadyPromise;
+
+async function ensureAppReady() {
+  if (!appReadyPromise) {
+    appReadyPromise = loadAppConfig().then(async () => {
+      if (!hasSupabaseConfig()) {
+        await ensureDataFile();
+      }
+    });
+  }
+
+  return appReadyPromise;
+}
+
+async function handleRequest(req, res) {
   try {
+    await ensureAppReady();
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname.startsWith("/api/")) {
       await handleApi(req, res, url.pathname);
@@ -410,15 +425,22 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     sendError(res, 500, error.message || "Server error.");
   }
-});
+}
 
-loadAppConfig().then(async () => {
-  if (!hasSupabaseConfig()) {
-    await ensureDataFile();
-  }
+const server = http.createServer(handleRequest);
 
-  server.listen(PORT, HOST, () => {
-    const storage = hasSupabaseConfig() ? "Supabase" : "local JSON";
-    console.log(`AirInvoice running at http://localhost:${PORT} (${storage} storage)`);
+if (require.main === module) {
+  ensureAppReady().then(() => {
+    server.listen(PORT, HOST, () => {
+      const storage = hasSupabaseConfig() ? "Supabase" : "local JSON";
+      console.log(`AirInvoice running at http://localhost:${PORT} (${storage} storage)`);
+    });
+  }).catch((error) => {
+    console.error(error);
+    process.exit(1);
   });
-});
+}
+
+module.exports = {
+  handleRequest
+};
