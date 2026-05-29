@@ -4,11 +4,13 @@ const path = require("path");
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "0.0.0.0";
-const ROOT = __dirname;
+const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, "data");
 const DATA_FILE = path.join(DATA_DIR, "items.json");
+const INDEX_FILE = path.join(ROOT, "index.html");
 const CONFIG_FILES = [path.join(ROOT, ".env"), path.join(ROOT, "supabase.txt")];
 const SUPABASE_TABLE = process.env.SUPABASE_TABLE || "invoice_items";
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 let appConfig = {
   username: process.env.APP_USERNAME || "admin",
@@ -109,6 +111,10 @@ async function ensureDataFile() {
 }
 
 async function readItems() {
+  if (IS_VERCEL && !hasSupabaseConfig()) {
+    throw new Error("Supabase environment variables are missing in Vercel.");
+  }
+
   await ensureDataFile();
   try {
     const content = await fs.readFile(DATA_FILE, "utf8");
@@ -120,6 +126,10 @@ async function readItems() {
 }
 
 async function writeItems(items) {
+  if (IS_VERCEL && !hasSupabaseConfig()) {
+    throw new Error("Supabase environment variables are missing in Vercel.");
+  }
+
   await ensureDataFile();
   await fs.writeFile(DATA_FILE, `${JSON.stringify(items, null, 2)}\n`, "utf8");
 }
@@ -302,6 +312,16 @@ function cleanItem(input) {
 }
 
 async function handleApi(req, res, pathname) {
+  if (pathname === "/api/health" && req.method === "GET") {
+    return sendJson(res, 200, {
+      ok: true,
+      storage: hasSupabaseConfig() ? "supabase" : "local-json",
+      hasSupabaseUrl: Boolean(appConfig.supabaseUrl),
+      hasSupabaseKey: Boolean(appConfig.supabaseKey),
+      isVercel: IS_VERCEL
+    });
+  }
+
   if (pathname === "/api/login" && req.method === "POST") {
     const body = await readBody(req);
     const ok = body.username === appConfig.username && body.password === appConfig.password;
@@ -379,7 +399,7 @@ async function serveStatic(req, res, pathname) {
     return;
   }
 
-  const filePath = path.normalize(path.join(ROOT, requestedPath));
+  const filePath = INDEX_FILE;
 
   if (!filePath.startsWith(ROOT)) {
     res.writeHead(403);
@@ -403,7 +423,7 @@ let appReadyPromise;
 async function ensureAppReady() {
   if (!appReadyPromise) {
     appReadyPromise = loadAppConfig().then(async () => {
-      if (!hasSupabaseConfig()) {
+      if (!hasSupabaseConfig() && !IS_VERCEL) {
         await ensureDataFile();
       }
     });
