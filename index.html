@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AirInvoice</title>
+  <style>
+    :root {
+      --primary: #185FA5;
+      --primary-dark: #0f477d;
+      --bg: #f3f5f8;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --paid: #16803c;
+      --paid-bg: #e8f7ee;
+      --unpaid: #c62828;
+      --unpaid-bg: #fdecec;
+      --cash: #17843f;
+      --bank: #185FA5;
+      --qr: #7c3aed;
+      --shadow: 0 12px 32px rgba(22, 32, 51, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app-shell {
+      width: min(100%, 420px);
+      min-height: 100vh;
+      margin: 0 auto;
+      background: var(--bg);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .login-screen {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-screen.active {
+      display: flex;
+    }
+
+    .login-card,
+    .card,
+    .invoice-card {
+      background: var(--card);
+      border: 1px solid rgba(24, 95, 165, 0.08);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .login-card {
+      width: 100%;
+      padding: 28px 22px 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 23px;
+      font-weight: 700;
+    }
+
+    .brand-title {
+      margin: 0;
+      color: var(--primary);
+      font-size: 27px;
+      line-height: 1.1;
+    }
+
+    .subtle {
+      color: var(--muted);
+      margin: 0 0 24px;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="date"],
+    input[type="number"] {
+      width: 100%;
+      height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[readonly] {
+      background: #f7f9fc;
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.12);
+    }
+
+    .btn {
+      min-height: 46px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 14px;
+      color: #fff;
+      background: var(--primary);
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      width: 100%;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn.secondary {
+      background: #eef4fb;
+      color: var(--primary);
+    }
+
+    .btn.secondary:hover {
+      background: #dcecfb;
+    }
+
+    .btn.danger {
+      background: #fff0f0;
+      color: var(--unpaid);
+    }
+
+    .btn.danger:hover {
+      background: #ffe1e1;
+    }
+
+    .error {
+      min-height: 20px;
+      color: var(--unpaid);
+      font-size: 13px;
+      font-weight: 700;
+      margin: -4px 0 14px;
+    }
+
+    .topbar {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .top-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .top-title h1 {
+      margin: 0;
+      font-size: 22px;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    .count-pill {
+      flex: 0 0 auto;
+      color: var(--primary);
+      background: #e9f2fb;
+      border: 1px solid #d3e5f6;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .icon-btn,
+    .logout-btn {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--primary);
+      font-size: 19px;
+      font-weight: 800;
+      box-shadow: 0 8px 22px rgba(22, 32, 51, 0.08);
+      display: grid;
+      place-items: center;
+    }
+
+    .logout-btn {
+      width: auto;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px;
+      border: 1px solid rgba(24, 95, 165, 0.08);
+      box-shadow: 0 8px 24px rgba(22, 32, 51, 0.06);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .stat-value {
+      margin-top: 8px;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .stat-paid {
+      color: var(--paid);
+    }
+
+    .stat-unpaid {
+      color: var(--unpaid);
+    }
+
+    .filter-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .filter-tab {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .filter-tab.active {
+      border-color: var(--primary);
+      background: #edf6ff;
+      color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 4px 0 10px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      color: #344054;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .section-count {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .items {
+      display: grid;
+      gap: 12px;
+      padding-bottom: 84px;
+    }
+
+    .item-card {
+      width: 100%;
+      border: 1px solid rgba(24, 95, 165, 0.08);
+      border-radius: 8px;
+      background: #fff;
+      color: inherit;
+      text-align: left;
+      padding: 15px;
+      box-shadow: 0 8px 24px rgba(22, 32, 51, 0.06);
+    }
+
+    .item-head,
+    .invoice-row,
+    .badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .item-name {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .amount {
+      color: var(--primary);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.paid {
+      color: var(--paid);
+      background: var(--paid-bg);
+    }
+
+    .badge.unpaid {
+      color: var(--unpaid);
+      background: var(--unpaid-bg);
+    }
+
+    .badge.cash {
+      color: #fff;
+      background: var(--cash);
+    }
+
+    .badge.bank {
+      color: #fff;
+      background: var(--bank);
+    }
+
+    .badge.qr {
+      color: #fff;
+      background: var(--qr);
+    }
+
+    .fab {
+      position: fixed;
+      right: max(18px, calc((100vw - 420px) / 2 + 18px));
+      bottom: 22px;
+      width: 58px;
+      height: 58px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 34px;
+      line-height: 1;
+      box-shadow: 0 16px 34px rgba(24, 95, 165, 0.35);
+      display: grid;
+      place-items: center;
+    }
+
+    .empty {
+      padding: 42px 18px;
+      text-align: center;
+      color: var(--muted);
+      background: #fff;
+      border: 1px dashed #c9d5e3;
+      border-radius: 8px;
+    }
+
+    .empty strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .form-card {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid rgba(24, 95, 165, 0.08);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 2px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .choice-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    .choice-group.status {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .choice input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .choice span {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #344054;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    .choice input:checked + span {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #edf6ff;
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
+    }
+
+    .invoice-card {
+      padding: 18px;
+    }
+
+    .invoice-number {
+      margin: 0 0 5px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .invoice-card h2 {
+      margin: 0 0 16px;
+      font-size: 23px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .invoice-lines {
+      display: grid;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .invoice-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .invoice-value {
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 800;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .total-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 8px;
+      background: #f0f7ff;
+      color: var(--primary);
+      text-align: right;
+    }
+
+    .total-box span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .total-box strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 30px;
+      line-height: 1;
+      word-break: break-word;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0 12px;
+    }
+
+    .full {
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (min-width: 421px) {
+      body {
+        background: #e6ebf1;
+      }
+
+      .app-shell {
+        box-shadow: 0 0 0 1px rgba(22, 32, 51, 0.05);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section id="loginScreen" class="screen login-screen active" aria-label="Login">
+      <form id="loginForm" class="login-card" autocomplete="on">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">✈</div>
+          <div>
+            <h1 class="brand-title">AirInvoice</h1>
+            <p class="subtle">Cargo and customs invoice tracking</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" type="text" autocomplete="username" required>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required>
+        </div>
+
+        <p id="loginError" class="error" role="alert"></p>
+        <button class="btn primary" type="submit">Log in</button>
+      </form>
+    </section>
+
+    <section id="listScreen" class="screen" aria-label="Items">
+      <header class="topbar">
+        <div class="top-title">
+          <div class="brand-mark" aria-hidden="true">✈</div>
+          <div>
+            <h1>AirInvoice</h1>
+            <span id="itemCount" class="count-pill">0 items</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="logout-btn" type="button" title="Log out">Logout</button>
+      </header>
+
+      <section class="stats" aria-label="Payment stats">
+        <div class="stat-card">
+          <div class="stat-label">Paid</div>
+          <div id="paidCount" class="stat-value stat-paid">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Unpaid</div>
+          <div id="unpaidCount" class="stat-value stat-unpaid">0</div>
+        </div>
+      </section>
+
+      <nav class="filter-tabs" aria-label="Item filters">
+        <button class="filter-tab active" type="button" data-filter="all">All</button>
+        <button class="filter-tab" type="button" data-filter="paid">Done</button>
+        <button class="filter-tab" type="button" data-filter="unpaid">Unpaid</button>
+      </nav>
+
+      <div class="section-head">
+        <h2 id="listHeading">All items</h2>
+        <span id="filterCount" class="section-count">0 shown</span>
+      </div>
+
+      <section id="itemsList" class="items" aria-live="polite"></section>
+      <button id="addFab" class="fab" type="button" aria-label="Add item">+</button>
+    </section>
+
+    <section id="addScreen" class="screen" aria-label="Add item">
+      <header class="topbar">
+        <div class="top-title">
+          <button id="addBackBtn" class="icon-btn" type="button" title="Back">‹</button>
+          <h1>Add Item</h1>
+        </div>
+      </header>
+
+      <form id="itemForm" class="form-card" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="itemName">Item</label>
+            <input id="itemName" type="text" placeholder="Item A">
+          </div>
+
+          <div class="field">
+            <label for="itemDate">Date</label>
+            <input id="itemDate" type="date">
+          </div>
+
+          <div class="field">
+            <label for="country">Country</label>
+            <input id="country" type="text" placeholder="China">
+          </div>
+
+          <div class="split">
+            <div class="field">
+              <label for="grossWeight">Gross weight</label>
+              <input id="grossWeight" type="number" min="0" step="0.01" placeholder="0">
+            </div>
+            <div class="field">
+              <label for="actualWeight">Actual weight</label>
+              <input id="actualWeight" type="number" min="0" step="0.01" placeholder="0">
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="field">
+              <label for="costPerWeight">Cost per weight</label>
+              <input id="costPerWeight" type="number" min="0" step="0.01" placeholder="0">
+            </div>
+            <div class="field">
+              <label for="currency">Currency</label>
+              <input id="currency" type="text" value="NPR" maxlength="8">
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="field">
+              <label for="billableWeight">Total weight</label>
+              <input id="billableWeight" type="number" min="0" step="0.01" value="0" readonly>
+            </div>
+            <div class="field">
+              <label for="amount">Total amount</label>
+              <input id="amount" type="number" min="0" step="0.01" value="0" readonly>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Payment method</label>
+            <div class="choice-group">
+              <label class="choice">
+                <input type="radio" name="method" value="cash" checked>
+                <span>💵 Cash</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="method" value="bank">
+                <span>🏦 Bank</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="method" value="qr">
+                <span>▦ QR</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Payment status</label>
+            <div class="choice-group status">
+              <label class="choice">
+                <input type="radio" name="status" value="paid" checked>
+                <span>✓ Paid</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="status" value="unpaid">
+                <span>◷ Unpaid</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <p id="formError" class="error" role="alert"></p>
+        <button class="btn primary" type="submit">Save Item</button>
+      </form>
+    </section>
+
+    <section id="invoiceScreen" class="screen" aria-label="Invoice">
+      <header class="topbar">
+        <div class="top-title">
+          <button id="invoiceBackBtn" class="icon-btn" type="button" title="Back">‹</button>
+          <h1>Invoice</h1>
+        </div>
+        <button id="deleteBtn" class="icon-btn" type="button" title="Delete">🗑</button>
+      </header>
+
+      <section id="invoiceContent"></section>
+    </section>
+  </main>
+
+  <script>
+    const LOGIN_KEY = "airinvoice_logged_in";
+
+    const screens = {
+      login: document.getElementById("loginScreen"),
+      list: document.getElementById("listScreen"),
+      add: document.getElementById("addScreen"),
+      invoice: document.getElementById("invoiceScreen")
+    };
+
+    const state = {
+      items: [],
+      activeItemId: null,
+      filter: "all",
+      isLoading: false,
+      loadError: ""
+    };
+
+    const methodLabels = {
+      cash: "Cash",
+      bank: "Bank",
+      qr: "QR"
+    };
+
+    const methodIcons = {
+      cash: "💵",
+      bank: "🏦",
+      qr: "▦"
+    };
+
+    const statusIcons = {
+      paid: "✓",
+      unpaid: "◷"
+    };
+
+    const today = () => new Date().toISOString().slice(0, 10);
+
+    const safeText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+
+    const invoiceNumber = (id) => `INV-${String(id).slice(-6).padStart(6, "0")}`;
+
+    const cleanNumber = (value) => {
+      const number = Number(value);
+      return Number.isFinite(number) && number >= 0 ? number : 0;
+    };
+
+    const numberText = (value, maximumFractionDigits = 2) => {
+      const number = cleanNumber(value);
+      return number.toLocaleString(undefined, {
+        minimumFractionDigits: number % 1 === 0 ? 0 : 2,
+        maximumFractionDigits
+      });
+    };
+
+    const calculateBillableWeight = (values) => {
+      const actualWeight = cleanNumber(values.actualWeight);
+      const grossWeight = cleanNumber(values.grossWeight);
+      return actualWeight > 0 ? actualWeight : grossWeight;
+    };
+
+    const calculateAmount = (values) => (
+      calculateBillableWeight(values) * cleanNumber(values.costPerWeight)
+    );
+
+    const amountText = (item) => {
+      return `${item.currency || "NPR"} ${numberText(item.amount)}`;
+    };
+
+    const weightText = (value) => `${numberText(value)} kg`;
+
+    const costPerWeightText = (item) => {
+      return `${item.currency || "NPR"} ${numberText(item.costPerWeight)} / kg`;
+    };
+
+    const statusSortRank = {
+      unpaid: 0,
+      paid: 1
+    };
+
+    function sortItemsByStatus(items) {
+      return [...items].sort((a, b) => {
+        const statusDifference = (statusSortRank[a.status] ?? 2) - (statusSortRank[b.status] ?? 2);
+        if (statusDifference !== 0) return statusDifference;
+
+        const dateDifference = Date.parse(b.date || "") - Date.parse(a.date || "");
+        if (Number.isFinite(dateDifference) && dateDifference !== 0) return dateDifference;
+
+        return Number(b.id || 0) - Number(a.id || 0);
+      });
+    }
+
+    async function apiRequest(path, options = {}) {
+      const response = await fetch(path, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error((data && data.error) || "Request failed.");
+      }
+
+      return data;
+    }
+
+    async function loadItems() {
+      state.isLoading = true;
+      renderList();
+
+      try {
+        const items = await apiRequest("/api/items");
+        state.items = Array.isArray(items) ? items : [];
+        state.loadError = "";
+      } catch (error) {
+        state.loadError = error.message;
+      } finally {
+        state.isLoading = false;
+        renderList();
+      }
+    }
+
+    function showScreen(name) {
+      Object.values(screens).forEach((screen) => screen.classList.remove("active"));
+      screens[name].classList.add("active");
+
+      if (name === "list") {
+        loadItems();
+      }
+
+      if (name === "add") {
+        resetItemForm();
+      }
+
+      if (name === "invoice") {
+        renderInvoice();
+      }
+    }
+
+    function renderList() {
+      const itemsList = document.getElementById("itemsList");
+      const paidCount = state.items.filter((item) => item.status === "paid").length;
+      const unpaidCount = state.items.filter((item) => item.status === "unpaid").length;
+      const filteredItems = state.filter === "all"
+        ? state.items
+        : state.items.filter((item) => item.status === state.filter);
+      const visibleItems = sortItemsByStatus(filteredItems);
+      const headings = {
+        all: "All items",
+        paid: "Done items",
+        unpaid: "Unpaid items"
+      };
+
+      document.getElementById("paidCount").textContent = paidCount;
+      document.getElementById("unpaidCount").textContent = unpaidCount;
+      document.getElementById("itemCount").textContent = `${state.items.length} ${state.items.length === 1 ? "item" : "items"}`;
+      document.getElementById("listHeading").textContent = headings[state.filter];
+      document.getElementById("filterCount").textContent = `${visibleItems.length} shown`;
+
+      document.querySelectorAll(".filter-tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.filter === state.filter);
+      });
+
+      if (state.isLoading) {
+        itemsList.innerHTML = `
+          <div class="empty">
+            <strong>Loading saved items</strong>
+            Reading invoices from the backend.
+          </div>
+        `;
+        return;
+      }
+
+      if (state.loadError) {
+        itemsList.innerHTML = `
+          <div class="empty">
+            <strong>Could not load saved items</strong>
+            ${safeText(state.loadError)}
+          </div>
+        `;
+        return;
+      }
+
+      if (!state.items.length) {
+        itemsList.innerHTML = `
+          <div class="empty">
+            <strong>No invoice items yet</strong>
+            Tap the + button to add your first airport cargo item.
+          </div>
+        `;
+        return;
+      }
+
+      if (!visibleItems.length) {
+        itemsList.innerHTML = `
+          <div class="empty">
+            <strong>No ${safeText(headings[state.filter].toLowerCase())}</strong>
+            ${state.filter === "paid" ? "Paid items will appear here when they are done." : "Items with this status will appear here."}
+          </div>
+        `;
+        return;
+      }
+
+      itemsList.innerHTML = visibleItems.map((item) => `
+        <button class="item-card" type="button" data-id="${safeText(item.id)}">
+          <div class="item-head">
+            <h2 class="item-name">${safeText(item.name)}</h2>
+            <span class="amount">${safeText(amountText(item))}</span>
+          </div>
+          <div class="meta">
+            <span>📅 ${safeText(item.date || "-")}</span>
+            <span>🌍 ${safeText(item.country || "-")}</span>
+            <span>Weight ${safeText(weightText(item.billableWeight || calculateBillableWeight(item)))}</span>
+          </div>
+          <div class="badge-row">
+            <span class="badge ${safeText(item.method)}">${methodIcons[item.method] || ""} ${safeText(methodLabels[item.method] || item.method)}</span>
+            <span class="badge ${safeText(item.status)}">${statusIcons[item.status] || ""} ${safeText(item.status)}</span>
+          </div>
+        </button>
+      `).join("");
+
+      itemsList.querySelectorAll(".item-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          state.activeItemId = card.dataset.id;
+          showScreen("invoice");
+        });
+      });
+    }
+
+    function updateAmountPreview() {
+      const values = {
+        grossWeight: document.getElementById("grossWeight").value,
+        actualWeight: document.getElementById("actualWeight").value,
+        costPerWeight: document.getElementById("costPerWeight").value
+      };
+
+      document.getElementById("billableWeight").value = calculateBillableWeight(values).toFixed(2);
+      document.getElementById("amount").value = calculateAmount(values).toFixed(2);
+    }
+
+    function resetItemForm() {
+      document.getElementById("itemForm").reset();
+      document.getElementById("itemDate").value = today();
+      document.getElementById("currency").value = "NPR";
+      document.getElementById("formError").textContent = "";
+      updateAmountPreview();
+    }
+
+    async function addItem(event) {
+      event.preventDefault();
+
+      const name = document.getElementById("itemName").value.trim();
+      const date = document.getElementById("itemDate").value || today();
+      const country = document.getElementById("country").value.trim();
+      const grossWeight = cleanNumber(document.getElementById("grossWeight").value);
+      const actualWeight = cleanNumber(document.getElementById("actualWeight").value);
+      const costPerWeight = cleanNumber(document.getElementById("costPerWeight").value);
+      const billableWeight = calculateBillableWeight({ grossWeight, actualWeight });
+      const amount = calculateAmount({ grossWeight, actualWeight, costPerWeight });
+      const currency = document.getElementById("currency").value.trim().toUpperCase() || "NPR";
+      const method = document.querySelector('input[name="method"]:checked').value;
+      const status = document.querySelector('input[name="status"]:checked').value;
+      const formError = document.getElementById("formError");
+
+      if (!name || billableWeight <= 0 || costPerWeight <= 0) {
+        formError.textContent = "Item name, weight, and cost per weight are required.";
+        return;
+      }
+
+      try {
+        const savedItem = await apiRequest("/api/items", {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            date,
+            country,
+            amount,
+            grossWeight,
+            actualWeight,
+            costPerWeight,
+            billableWeight,
+            currency,
+            method,
+            status
+          })
+        });
+        state.items.unshift(savedItem);
+        showScreen("list");
+      } catch (error) {
+        formError.textContent = error.message;
+      }
+    }
+
+    function getActiveItem() {
+      return state.items.find((item) => item.id === state.activeItemId);
+    }
+
+    function renderInvoice() {
+      const item = getActiveItem();
+      const invoiceContent = document.getElementById("invoiceContent");
+
+      if (!item) {
+        invoiceContent.innerHTML = `
+          <div class="empty">
+            <strong>Invoice not found</strong>
+            This item may have been removed.
+          </div>
+        `;
+        return;
+      }
+
+      invoiceContent.innerHTML = `
+        <article class="invoice-card">
+          <p class="invoice-number">${safeText(invoiceNumber(item.id))}</p>
+          <h2>${safeText(item.name)}</h2>
+          <div class="invoice-lines">
+            <div class="invoice-row">
+              <span class="invoice-label">Date</span>
+              <span class="invoice-value">${safeText(item.date || "-")}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Country</span>
+              <span class="invoice-value">${safeText(item.country || "-")}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Gross weight</span>
+              <span class="invoice-value">${safeText(weightText(item.grossWeight))}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Actual weight</span>
+              <span class="invoice-value">${safeText(weightText(item.actualWeight))}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Total weight</span>
+              <span class="invoice-value">${safeText(weightText(item.billableWeight || calculateBillableWeight(item)))}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Cost per weight</span>
+              <span class="invoice-value">${safeText(costPerWeightText(item))}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Payment</span>
+              <span class="badge ${safeText(item.method)}">${methodIcons[item.method] || ""} ${safeText(methodLabels[item.method] || item.method)}</span>
+            </div>
+            <div class="invoice-row">
+              <span class="invoice-label">Status</span>
+              <span class="badge ${safeText(item.status)}">${statusIcons[item.status] || ""} ${safeText(item.status)}</span>
+            </div>
+          </div>
+          <div class="total-box">
+            <span>Total Amount</span>
+            <strong>${safeText(amountText(item))}</strong>
+          </div>
+        </article>
+
+        <div class="actions">
+          <button id="whatsappBtn" class="btn" type="button">☏ WhatsApp</button>
+          <button id="downloadPdfBtn" class="btn secondary" type="button">Download PDF</button>
+        </div>
+        <button id="toggleStatusBtn" class="btn primary full" type="button">
+          Mark as ${item.status === "paid" ? "Unpaid" : "Paid"}
+        </button>
+      `;
+
+      document.getElementById("whatsappBtn").addEventListener("click", () => openWhatsApp(item));
+      document.getElementById("downloadPdfBtn").addEventListener("click", () => downloadInvoicePdf(item));
+      document.getElementById("toggleStatusBtn").addEventListener("click", toggleStatus);
+    }
+
+    function invoiceMessage(item) {
+      return [
+        "*INVOICE — AirInvoice*",
+        `Invoice No: ${invoiceNumber(item.id)}`,
+        `Item: ${item.name}`,
+        `Date: ${item.date}`,
+        `Country: ${item.country || "-"}`,
+        `Gross weight: ${weightText(item.grossWeight)}`,
+        `Actual weight: ${weightText(item.actualWeight)}`,
+        `Total weight: ${weightText(item.billableWeight || calculateBillableWeight(item))}`,
+        `Cost per weight: ${costPerWeightText(item)}`,
+        `Payment: ${methodLabels[item.method] || item.method}`,
+        `Status: ${item.status.toUpperCase()}`,
+        `*Total: ${amountText(item)}*`
+      ].join("\n");
+    }
+
+    function openWhatsApp(item) {
+      const url = `https://wa.me/?text=${encodeURIComponent(invoiceMessage(item))}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    function pdfText(value) {
+      return String(value ?? "")
+        .replace(/[^\x20-\x7E]/g, " ")
+        .replace(/[\\()]/g, "\\$&");
+    }
+
+    function fileNameText(value) {
+      return String(value || "invoice")
+        .trim()
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 50) || "invoice";
+    }
+
+    function wrapPdfLine(value, maxLength = 44) {
+      const words = String(value ?? "-").replace(/\s+/g, " ").trim().split(" ");
+      const lines = [];
+      let line = "";
+
+      words.forEach((word) => {
+        const nextLine = line ? `${line} ${word}` : word;
+        if (nextLine.length > maxLength && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = nextLine;
+        }
+      });
+
+      if (line) lines.push(line);
+      return lines.length ? lines : ["-"];
+    }
+
+    function pdfTextCommand(value, x, y, size = 12) {
+      return `BT /F1 ${size} Tf 1 0 0 1 ${x} ${y} Tm (${pdfText(value)}) Tj ET`;
+    }
+
+    function invoiceRows(item) {
+      return [
+        ["Item", item.name],
+        ["Date", item.date || "-"],
+        ["Country", item.country || "-"],
+        ["Gross weight", weightText(item.grossWeight)],
+        ["Actual weight", weightText(item.actualWeight)],
+        ["Total weight", weightText(item.billableWeight || calculateBillableWeight(item))],
+        ["Cost per weight", costPerWeightText(item)],
+        ["Payment", methodLabels[item.method] || item.method],
+        ["Status", String(item.status || "-").toUpperCase()]
+      ];
+    }
+
+    function createInvoicePdf(item) {
+      const encoder = new TextEncoder();
+      const content = [];
+      let y = 770;
+
+      content.push("0.09 0.37 0.65 rg");
+      content.push(pdfTextCommand("AirInvoice", 54, y, 26));
+      y -= 24;
+      content.push("0.4 g");
+      content.push(pdfTextCommand(invoiceNumber(item.id), 54, y, 12));
+      y -= 34;
+      content.push("0 g");
+
+      invoiceRows(item).forEach(([label, value]) => {
+        const valueLines = wrapPdfLine(value);
+        content.push("0.4 g");
+        content.push(pdfTextCommand(label, 54, y, 11));
+        content.push("0 g");
+        valueLines.forEach((line, index) => {
+          content.push(pdfTextCommand(line, 220, y - (index * 16), 12));
+        });
+        y -= Math.max(24, valueLines.length * 16 + 8);
+      });
+
+      y -= 18;
+      content.push("0.93 0.97 1 rg");
+      content.push(`54 ${y - 18} 504 54 re f`);
+      content.push("0.09 0.37 0.65 rg");
+      content.push(pdfTextCommand("Total Amount", 72, y + 12, 12));
+      content.push(pdfTextCommand(amountText(item), 330, y + 8, 24));
+
+      const stream = content.join("\n");
+      const objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        `<< /Length ${encoder.encode(stream).length} >>\nstream\n${stream}\nendstream`
+      ];
+
+      const offsets = [0];
+      let pdf = "%PDF-1.4\n";
+      objects.forEach((object, index) => {
+        offsets[index + 1] = encoder.encode(pdf).length;
+        pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+      });
+
+      const xrefOffset = encoder.encode(pdf).length;
+      pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+      for (let index = 1; index <= objects.length; index += 1) {
+        pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+      }
+      pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+      return pdf;
+    }
+
+    function downloadInvoicePdf(item) {
+      const blob = new Blob([createInvoicePdf(item)], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${invoiceNumber(item.id)}-${fileNameText(item.name)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function printInvoice(item) {
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Please allow popups to print this invoice.");
+        return;
+      }
+
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+        <head>
+          <title>${safeText(invoiceNumber(item.id))}</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 32px;
+              color: #172033;
+              font-family: Arial, Helvetica, sans-serif;
+              background: #fff;
+            }
+            .invoice {
+              max-width: 680px;
+              margin: 0 auto;
+              border: 1px solid #d9e0ea;
+              border-radius: 8px;
+              padding: 28px;
+            }
+            h1 {
+              color: #185FA5;
+              margin: 0 0 6px;
+              font-size: 28px;
+            }
+            .number {
+              color: #667085;
+              font-weight: 700;
+              margin: 0 0 24px;
+            }
+            .row {
+              display: flex;
+              justify-content: space-between;
+              gap: 18px;
+              padding: 12px 0;
+              border-bottom: 1px solid #eef2f6;
+            }
+            .label {
+              color: #667085;
+              font-weight: 700;
+            }
+            .value {
+              font-weight: 700;
+              text-align: right;
+            }
+            .status {
+              color: ${item.status === "paid" ? "#16803c" : "#c62828"};
+            }
+            .total {
+              margin-top: 26px;
+              text-align: right;
+              color: #185FA5;
+              font-size: 34px;
+              font-weight: 900;
+            }
+            @media print {
+              body { padding: 0; }
+              .invoice { border: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="invoice">
+            <h1>AirInvoice</h1>
+            <p class="number">${safeText(invoiceNumber(item.id))}</p>
+            <div class="row"><span class="label">Item</span><span class="value">${safeText(item.name)}</span></div>
+            <div class="row"><span class="label">Date</span><span class="value">${safeText(item.date || "-")}</span></div>
+            <div class="row"><span class="label">Country</span><span class="value">${safeText(item.country || "-")}</span></div>
+            <div class="row"><span class="label">Gross weight</span><span class="value">${safeText(weightText(item.grossWeight))}</span></div>
+            <div class="row"><span class="label">Actual weight</span><span class="value">${safeText(weightText(item.actualWeight))}</span></div>
+            <div class="row"><span class="label">Total weight</span><span class="value">${safeText(weightText(item.billableWeight || calculateBillableWeight(item)))}</span></div>
+            <div class="row"><span class="label">Cost per weight</span><span class="value">${safeText(costPerWeightText(item))}</span></div>
+            <div class="row"><span class="label">Payment</span><span class="value">${safeText(methodLabels[item.method] || item.method)}</span></div>
+            <div class="row"><span class="label">Status</span><span class="value status">${safeText(item.status.toUpperCase())}</span></div>
+            <div class="total">${safeText(amountText(item))}</div>
+          </main>
+          <script>
+            window.addEventListener("load", () => {
+              window.print();
+            });
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+
+    async function toggleStatus() {
+      const item = getActiveItem();
+      if (!item) return;
+
+      const nextStatus = item.status === "paid" ? "unpaid" : "paid";
+
+      try {
+        const updatedItem = await apiRequest(`/api/items/${encodeURIComponent(item.id)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: nextStatus })
+        });
+        const index = state.items.findIndex((savedItem) => savedItem.id === item.id);
+        if (index !== -1) {
+          state.items[index] = updatedItem;
+        }
+        renderInvoice();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function deleteActiveItem() {
+      const item = getActiveItem();
+      if (!item) return;
+
+      if (!confirm(`Delete invoice item "${item.name}"?`)) {
+        return;
+      }
+
+      try {
+        await apiRequest(`/api/items/${encodeURIComponent(item.id)}`, {
+          method: "DELETE"
+        });
+        state.items = state.items.filter((savedItem) => savedItem.id !== item.id);
+        state.activeItemId = null;
+        showScreen("list");
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const loginError = document.getElementById("loginError");
+
+      try {
+        await apiRequest("/api/login", {
+          method: "POST",
+          body: JSON.stringify({ username, password })
+        });
+        localStorage.setItem(LOGIN_KEY, "true");
+        loginError.textContent = "";
+        showScreen("list");
+      } catch (error) {
+        loginError.textContent = error.message;
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem(LOGIN_KEY);
+      document.getElementById("password").value = "";
+      showScreen("login");
+    });
+
+    document.getElementById("addFab").addEventListener("click", () => showScreen("add"));
+    document.getElementById("addBackBtn").addEventListener("click", () => showScreen("list"));
+    document.getElementById("invoiceBackBtn").addEventListener("click", () => showScreen("list"));
+    document.getElementById("deleteBtn").addEventListener("click", deleteActiveItem);
+    document.getElementById("itemForm").addEventListener("submit", addItem);
+    document.querySelectorAll(".filter-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        state.filter = tab.dataset.filter;
+        renderList();
+      });
+    });
+
+    ["grossWeight", "actualWeight", "costPerWeight"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", updateAmountPreview);
+    });
+
+    document.getElementById("itemDate").value = today();
+    updateAmountPreview();
+    showScreen(localStorage.getItem(LOGIN_KEY) === "true" ? "list" : "login");
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+.env
+supabase.txt
+data/*.json
+node_modules/

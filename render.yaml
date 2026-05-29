@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: airinvoice
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        value: https://pxqfjskcwodcpxiserbr.supabase.co
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_TABLE
+        value: invoice_items
