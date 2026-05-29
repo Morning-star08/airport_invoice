@@ -699,7 +699,7 @@
       <header class="topbar">
         <div class="top-title">
           <button id="addBackBtn" class="icon-btn" type="button" title="Back">‹</button>
-          <h1>Add Item</h1>
+          <h1 id="formTitle">Add Item</h1>
         </div>
       </header>
 
@@ -787,7 +787,7 @@
         </div>
 
         <p id="formError" class="error" role="alert"></p>
-        <button class="btn primary" type="submit">Save Item</button>
+        <button id="formSubmitBtn" class="btn primary" type="submit">Save Item</button>
       </form>
     </section>
 
@@ -817,6 +817,7 @@
     const state = {
       items: [],
       activeItemId: null,
+      editingItemId: null,
       filter: "all",
       isLoading: false,
       loadError: ""
@@ -943,7 +944,7 @@
       }
 
       if (name === "add") {
-        resetItemForm();
+        prepareItemForm();
       }
 
       if (name === "invoice") {
@@ -1052,6 +1053,24 @@
       document.getElementById("amount").value = calculateAmount(values).toFixed(2);
     }
 
+    function setRadioValue(name, value) {
+      const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+      if (input) input.checked = true;
+    }
+
+    function fillItemForm(item) {
+      document.getElementById("itemName").value = item.name || "";
+      document.getElementById("itemDate").value = item.date || today();
+      document.getElementById("country").value = item.country || "";
+      document.getElementById("grossWeight").value = cleanNumber(item.grossWeight);
+      document.getElementById("actualWeight").value = cleanNumber(item.actualWeight);
+      document.getElementById("costPerWeight").value = cleanNumber(item.costPerWeight);
+      document.getElementById("currency").value = item.currency || "NPR";
+      setRadioValue("method", item.method || "cash");
+      setRadioValue("status", item.status || "unpaid");
+      updateAmountPreview();
+    }
+
     function resetItemForm() {
       document.getElementById("itemForm").reset();
       document.getElementById("itemDate").value = today();
@@ -1060,7 +1079,23 @@
       updateAmountPreview();
     }
 
-    async function addItem(event) {
+    function prepareItemForm() {
+      const item = state.editingItemId
+        ? state.items.find((savedItem) => savedItem.id === state.editingItemId)
+        : null;
+
+      document.getElementById("formTitle").textContent = item ? "Edit Item" : "Add Item";
+      document.getElementById("formSubmitBtn").textContent = item ? "Save Changes" : "Save Item";
+      document.getElementById("formError").textContent = "";
+
+      if (item) {
+        fillItemForm(item);
+      } else {
+        resetItemForm();
+      }
+    }
+
+    async function saveItem(event) {
       event.preventDefault();
 
       const name = document.getElementById("itemName").value.trim();
@@ -1081,24 +1116,40 @@
         return;
       }
 
+      const payload = {
+        name,
+        date,
+        country,
+        amount,
+        grossWeight,
+        actualWeight,
+        costPerWeight,
+        billableWeight,
+        currency,
+        method,
+        status
+      };
+
       try {
+        if (state.editingItemId) {
+          const updatedItem = await apiRequest(`/api/items/${encodeURIComponent(state.editingItemId)}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload)
+          });
+          const index = state.items.findIndex((item) => item.id === state.editingItemId);
+          if (index !== -1) state.items[index] = updatedItem;
+          state.activeItemId = updatedItem.id;
+          state.editingItemId = null;
+          showScreen("invoice");
+          return;
+        }
+
         const savedItem = await apiRequest("/api/items", {
           method: "POST",
-          body: JSON.stringify({
-            name,
-            date,
-            country,
-            amount,
-            grossWeight,
-            actualWeight,
-            costPerWeight,
-            billableWeight,
-            currency,
-            method,
-            status
-          })
+          body: JSON.stringify(payload)
         });
         state.items.unshift(savedItem);
+        state.editingItemId = null;
         showScreen("list");
       } catch (error) {
         formError.textContent = error.message;
@@ -1171,6 +1222,7 @@
           <button id="whatsappBtn" class="btn" type="button">☏ WhatsApp</button>
           <button id="downloadPdfBtn" class="btn secondary" type="button">Download PDF</button>
         </div>
+        <button id="editItemBtn" class="btn secondary full" type="button">Edit Item</button>
         <button id="toggleStatusBtn" class="btn primary full" type="button">
           Mark as ${item.status === "paid" ? "Unpaid" : "Paid"}
         </button>
@@ -1178,6 +1230,7 @@
 
       document.getElementById("whatsappBtn").addEventListener("click", () => openWhatsApp(item));
       document.getElementById("downloadPdfBtn").addEventListener("click", () => downloadInvoicePdf(item));
+      document.getElementById("editItemBtn").addEventListener("click", editActiveItem);
       document.getElementById("toggleStatusBtn").addEventListener("click", toggleStatus);
     }
 
@@ -1438,6 +1491,14 @@
       }
     }
 
+    function editActiveItem() {
+      const item = getActiveItem();
+      if (!item) return;
+
+      state.editingItemId = item.id;
+      showScreen("add");
+    }
+
     async function deleteActiveItem() {
       const item = getActiveItem();
       if (!item) return;
@@ -1484,11 +1545,18 @@
       showScreen("login");
     });
 
-    document.getElementById("addFab").addEventListener("click", () => showScreen("add"));
-    document.getElementById("addBackBtn").addEventListener("click", () => showScreen("list"));
+    document.getElementById("addFab").addEventListener("click", () => {
+      state.editingItemId = null;
+      showScreen("add");
+    });
+    document.getElementById("addBackBtn").addEventListener("click", () => {
+      const destination = state.editingItemId ? "invoice" : "list";
+      state.editingItemId = null;
+      showScreen(destination);
+    });
     document.getElementById("invoiceBackBtn").addEventListener("click", () => showScreen("list"));
     document.getElementById("deleteBtn").addEventListener("click", deleteActiveItem);
-    document.getElementById("itemForm").addEventListener("submit", addItem);
+    document.getElementById("itemForm").addEventListener("submit", saveItem);
     document.querySelectorAll(".filter-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         state.filter = tab.dataset.filter;
