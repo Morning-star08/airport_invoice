@@ -4,6 +4,9 @@
   "private": true,
   "description": "Mobile-first Airport Invoice Tracker with Supabase-backed storage.",
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js"
   }

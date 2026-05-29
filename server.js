@@ -3,6 +3,7 @@ const fs = require("fs/promises");
 const path = require("path");
 
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || "0.0.0.0";
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const DATA_FILE = path.join(DATA_DIR, "items.json");
@@ -416,7 +417,7 @@ loadAppConfig().then(async () => {
     await ensureDataFile();
   }
 
-  server.listen(PORT, () => {
+  server.listen(PORT, HOST, () => {
     const storage = hasSupabaseConfig() ? "Supabase" : "local JSON";
     console.log(`AirInvoice running at http://localhost:${PORT} (${storage} storage)`);
   });
